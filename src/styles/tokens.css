@@ -1,0 +1,118 @@
+/* CanvasClip — variables de diseño.
+   Grafito neutro, acento discreto, profundidad sutil. */
+
+:root {
+  color-scheme: dark;
+
+  /* Superficies */
+  --bg-canvas: #141416;
+  --bg-window: #18181b;
+  --surface-1: #1d1d21;
+  --surface-2: #242429;
+  --surface-3: #2d2d33;
+  --surface-hover: rgba(255, 255, 255, 0.055);
+  --surface-active: rgba(255, 255, 255, 0.09);
+
+  /* Bordes */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --hairline: inset 0 0 0 1px var(--border);
+
+  /* Texto */
+  --text-1: #ececf0;
+  --text-2: #a4a4ae;
+  --text-3: #6f6f79;
+  --text-on-accent: #0f1220;
+
+  /* Acento y estados */
+  --accent: #8ea8ff;
+  --accent-strong: #a9bcff;
+  --accent-weak: rgba(142, 168, 255, 0.16);
+  --accent-ring: rgba(142, 168, 255, 0.55);
+  --danger: #f2777a;
+  --danger-weak: rgba(242, 119, 122, 0.14);
+  --favorite: #f0c96a;
+  --success: #8fd6a8;
+
+  /* Panel y aviso: opacidad del fondo según la intensidad de efectos */
+  --glass-alpha: 0.86;
+  --glass-bg: rgba(28, 28, 32, var(--glass-alpha));
+
+  /* Notas */
+  --note-sand: #ecdfb8;
+  --note-sage: #cfdfc5;
+  --note-sky: #c8d9ec;
+  --note-rose: #ebcdd3;
+  --note-lilac: #d9d0ea;
+  --note-graphite: #34343b;
+  --note-ink: #26262b;
+  --note-ink-light: #ececf0;
+
+  /* Forma */
+  --radius-xs: 4px;
+  --radius-s: 6px;
+  --radius-m: 9px;
+  --radius-l: 12px;
+  --radius-xl: 16px;
+
+  /* Sombras */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 1px rgba(0, 0, 0, 0.2);
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-pop: 0 12px 36px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--border-strong);
+  --shadow-object: 0 1px 2px rgba(0, 0, 0, 0.45), 0 6px 18px rgba(0, 0, 0, 0.32);
+
+  /* Tipografía */
+  --font: "Inter Variable", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Code", "Consolas", ui-monospace, monospace;
+  --text-xs: 11px;
+  --text-s: 12px;
+  --text-m: 13px;
+  --text-l: 15px;
+
+  /* Espaciado (escala de 4) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Movimiento */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --dur-fast: 110ms;
+  --dur: 170ms;
+  --dur-slow: 240ms;
+
+  /* Densidad */
+  --row-gap: 10px;
+  --card-pad: 10px;
+  --control-h: 28px;
+}
+
+:root[data-density="compact"] {
+  --row-gap: 6px;
+  --card-pad: 7px;
+  --control-h: 26px;
+}
+
+:root[data-effects="off"] {
+  --glass-alpha: 1;
+}
+:root[data-effects="full"] {
+  --glass-alpha: 0.7;
+}
+
+:root[data-reduce-motion="true"] {
+  --dur-fast: 0ms;
+  --dur: 0ms;
+  --dur-slow: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+  }
+}

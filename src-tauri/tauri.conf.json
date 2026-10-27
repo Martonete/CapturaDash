@@ -1,0 +1,90 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CanvasClip",
+  "version": "0.1.0",
+  "identifier": "com.canvasclip.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "CanvasClip",
+        "url": "index.html",
+        "width": 1180,
+        "height": 760,
+        "minWidth": 720,
+        "minHeight": 480,
+        "center": true,
+        "visible": false,
+        "decorations": false,
+        "shadow": true,
+        "dragDropEnabled": false,
+        "backgroundColor": "#141416",
+        "theme": "Dark"
+      },
+      {
+        "label": "panel",
+        "title": "CanvasClip — Historial",
+        "url": "panel.html",
+        "width": 360,
+        "height": 720,
+        "visible": false,
+        "focus": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": true,
+        "resizable": false,
+        "maximizable": false,
+        "minimizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "dragDropEnabled": false,
+        "theme": "Dark"
+      },
+      {
+        "label": "toast",
+        "title": "CanvasClip",
+        "url": "toast.html",
+        "width": 300,
+        "height": 72,
+        "visible": false,
+        "focus": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": true,
+        "resizable": false,
+        "maximizable": false,
+        "minimizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "theme": "Dark"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: blob: ccimg: http://ccimg.localhost; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "CanvasClip",
+    "category": "Utility",
+    "shortDescription": "Historial visual de capturas con pizarrón infinito",
+    "longDescription": "CanvasClip guarda automáticamente las capturas de pantalla del portapapeles, las muestra en un panel lateral y permite organizarlas en pizarrones infinitos.",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["Spanish", "English"],
+        "displayLanguageSelector": false
+      },
+      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true }
+    }
+  }
+}

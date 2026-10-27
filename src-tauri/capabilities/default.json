@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permisos de las tres ventanas de CanvasClip. Los comandos propios de la app están permitidos por defecto; acá solo se habilita lo mínimo del núcleo.",
+  "windows": ["main", "panel", "toast"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-is-maximized",
+    "core:window:allow-hide",
+    "core:window:allow-start-dragging",
+    "dialog:allow-open"
+  ]
+}
