@@ -6,7 +6,7 @@ use crate::windows::{self, panel, toast};
 /// La interfaz del panel terminó la animación de cierre.
 #[tauri::command]
 pub async fn panel_hide(app: AppHandle) -> CmdResult<()> {
-    panel::hide_now(&app);
+    panel::finish_close(&app);
     Ok(())
 }
 

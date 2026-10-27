@@ -21,8 +21,9 @@ import {
 import { boundsOf, fitCamera, screenToWorld, zoomAt, type Point } from "./geometry";
 
 /** Lado máximo inicial de una imagen nueva en el pizarrón. */
-const MAX_INITIAL_SIDE = 900;
+const MAX_INITIAL_SIDE = 720;
 export const NOTE_SIZE = { width: 220, height: 168 };
+const CASCADE = 28;
 
 /** Última posición del puntero en coordenadas del mundo (para pegar). */
 let lastPointer: Point | null = null;
@@ -175,10 +176,10 @@ export async function importFiles(files: File[], at: Point) {
   }
 }
 
+/** Encuadra todos los elementos del pizarrón (tecla F). */
 export function fitAll(animated = true) {
-  const { doc, selection } = useBoard.getState();
-  const ids = selection.length ? selection : Object.keys(doc.objects);
-  const b = boundsOf(ids.map((id) => doc.objects[id]).filter(Boolean).map(rectOf));
+  const { doc } = useBoard.getState();
+  const b = boundsOf(Object.values(doc.objects).map(rectOf));
   const { width, height } = camera.viewport;
   const target = b ? fitCamera(b, width, height, 72, 1) : { x: width / 2, y: height / 2, zoom: 1 };
   if (animated) camera.animateTo(target);
@@ -203,8 +204,16 @@ export function placeIncoming(objects: BoardObject[]) {
   s.mergeSaved(objects);
   const center = viewportCenter();
   const patches: Record<string, Partial<BoardObject>> = {};
+  const existing = Object.values(s.doc.objects);
   objects.forEach((o, i) => {
-    patches[o.id] = { x: center.x - o.width / 2 + i * 24, y: center.y - o.height / 2 + i * 24 };
+    // Escalonar si ya hay algo en el mismo lugar (agregar varias seguidas).
+    let x = center.x - o.width / 2 + i * CASCADE;
+    let y = center.y - o.height / 2 + i * CASCADE;
+    while (existing.some((e) => Math.abs(e.x - x) < 4 && Math.abs(e.y - y) < 4)) {
+      x += CASCADE;
+      y += CASCADE;
+    }
+    patches[o.id] = { x, y };
   });
   // La reubicación no suma un paso de deshacer: es parte de la misma inserción.
   useBoard.setState((st) => {

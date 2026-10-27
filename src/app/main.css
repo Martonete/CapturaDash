@@ -401,3 +401,8 @@
   font-size: var(--text-s);
   color: var(--accent-strong);
 }
+
+/* El aviso breve va por encima de los controles inferiores del pizarrón. */
+.app .flash {
+  bottom: 72px;
+}

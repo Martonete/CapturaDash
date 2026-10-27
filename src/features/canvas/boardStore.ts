@@ -76,7 +76,14 @@ export const useBoard = create<BoardState>((set, get) => ({
       if (get().boardId !== boardId) return;
       const captures: Record<string, Capture> = {};
       for (const c of caps) captures[c.id] = c;
-      camera.set({ x: d.board.cameraX, y: d.board.cameraY, zoom: d.board.zoom || 1 });
+      const isDefault = d.board.cameraX === 0 && d.board.cameraY === 0 && d.board.zoom === 1;
+      const { width, height } = camera.viewport;
+      // Sin cámara guardada: origen del mundo en el centro de la vista.
+      camera.set(
+        isDefault && width > 1
+          ? { x: width / 2, y: height / 2, zoom: 1 }
+          : { x: d.board.cameraX, y: d.board.cameraY, zoom: d.board.zoom || 1 },
+      );
       set({
         boardName: d.board.name,
         status: "ready",

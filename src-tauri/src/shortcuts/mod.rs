@@ -46,6 +46,7 @@ pub fn register(app: &AppHandle, accel: &str) -> Result<(), String> {
     });
     match result {
         Ok(()) => {
+            log::info!("atajo global registrado: {accel}");
             *state.shortcut.lock() = Some(accel.to_string());
             Ok(())
         }

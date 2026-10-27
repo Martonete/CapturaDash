@@ -10,7 +10,7 @@ import {
   Trash2,
   Ungroup,
 } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   addNote,
@@ -51,6 +51,7 @@ export function Canvas() {
   const editingId = useBoard((s) => s.editingId);
   const grid = useSettings((s) => s.settings?.grid ?? "dots");
   const snap = useCameraSnapshot(100);
+  const [size, setSize] = useState(camera.viewport);
   const input = useCanvasInput(viewportRef);
   useCanvasKeyboard(input.setSpace);
 
@@ -84,7 +85,13 @@ export function Canvas() {
     const unsub = camera.subscribe(onCamera);
 
     const ro = new ResizeObserver(([entry]) => {
-      camera.viewport = { width: entry.contentRect.width, height: entry.contentRect.height };
+      const first = camera.viewport.width <= 1;
+      const next = { width: entry.contentRect.width, height: entry.contentRect.height };
+      camera.viewport = next;
+      setSize(next);
+      // Pizarrón sin cámara guardada: el origen del mundo va al centro de la vista.
+      const c = camera.current;
+      if (first && c.x === 0 && c.y === 0 && c.zoom === 1) camera.set({ x: next.width / 2, y: next.height / 2, zoom: 1 });
     });
     ro.observe(vp);
     return () => {
@@ -99,8 +106,7 @@ export function Canvas() {
   const selected = useMemo(() => new Set(selection), [selection]);
 
   // Solo se renderiza lo que está cerca de la vista (más lo seleccionado).
-  const { width, height } = camera.viewport;
-  const view = visibleWorld(snap, width, height, 0.5);
+  const view = visibleWorld(snap, size.width, size.height, 0.5);
   const dpr = window.devicePixelRatio || 1;
   const hiRes = useRef(new Set<string>());
   const visible = ordered.filter((o) => selected.has(o.id) || o.id === editingId || intersects(rectOf(o), view));

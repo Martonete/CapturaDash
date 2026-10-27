@@ -369,3 +369,22 @@ fn settings_roundtrip_and_normalize() {
     assert!(e.db.take_first_run().unwrap());
     assert!(!e.db.take_first_run().unwrap());
 }
+
+#[test]
+fn usage_tracking_helpers() {
+    let e = env();
+    let a = e.db.ensure_default_board().unwrap();
+    let b = e.db.create_board("Otro").unwrap().id;
+    let id = add(&e, 1, 500).capture.id;
+    for (board, oid) in [(&a, "u1"), (&a, "u2"), (&b, "u3")] {
+        e.db.save_board_changes(&BoardChanges {
+            board_id: board.clone(),
+            upsert_objects: vec![image_obj(board, &id, oid)],
+            ..Default::default()
+        })
+        .unwrap();
+    }
+    assert_eq!(e.db.object_capture_ids(&["u1".into(), "nada".into()]).unwrap(), vec![id.clone()]);
+    // Dos objetos en el mismo pizarrón cuentan como un solo pizarrón.
+    assert_eq!(e.db.usage_counts(&[id.clone()]).unwrap(), vec![(id.clone(), 2)]);
+}

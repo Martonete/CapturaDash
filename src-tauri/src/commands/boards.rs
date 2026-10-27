@@ -8,7 +8,7 @@ use crate::state::AppState;
 use crate::windows::MAIN;
 
 /// Tamaño máximo con el que una captura entra al pizarrón (unidades del mundo).
-const MAX_INITIAL_SIDE: f64 = 900.0;
+const MAX_INITIAL_SIDE: f64 = 720.0;
 
 #[tauri::command]
 pub async fn list_boards(state: State<'_, AppState>) -> CmdResult<Vec<BoardSummary>> {
@@ -58,10 +58,31 @@ pub async fn load_board(state: State<'_, AppState>, id: String) -> CmdResult<Boa
 }
 
 #[tauri::command]
-pub async fn save_board_changes(state: State<'_, AppState>, changes: BoardChanges) -> CmdResult<SaveReport> {
+pub async fn save_board_changes(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    changes: BoardChanges,
+) -> CmdResult<SaveReport> {
+    // Capturas cuyo uso puede cambiar: las de objetos agregados y borrados.
+    let mut affected: Vec<String> =
+        changes.upsert_objects.iter().filter_map(|o| o.capture_id.clone()).collect();
+    affected.extend(state.db.object_capture_ids(&changes.delete_objects).map_err(core_err)?);
+    affected.sort();
+    affected.dedup();
+    let before = state.db.usage_counts(&affected).map_err(core_err)?;
+
     let report = state.db.save_board_changes(&changes).map_err(core_err)?;
     if !report.skipped_objects.is_empty() {
         log::warn!("objetos descartados al guardar: {:?}", report.skipped_objects);
+    }
+
+    let after = state.db.usage_counts(&affected).map_err(core_err)?;
+    for ((id, b), (_, a)) in before.iter().zip(after.iter()) {
+        if a != b {
+            if let Ok(c) = state.db.get_capture(id) {
+                events::captures_changed(&app, events::CapturesChanged { updated: Some(c), ..Default::default() });
+            }
+        }
     }
     Ok(report)
 }

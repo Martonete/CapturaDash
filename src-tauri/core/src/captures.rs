@@ -190,6 +190,31 @@ impl Db {
         Ok(removed)
     }
 
+    /// Capturas referenciadas por estos objetos (para detectar cambios de uso).
+    pub fn object_capture_ids(&self, object_ids: &[String]) -> Result<Vec<String>> {
+        let conn = self.conn();
+        let mut stmt = conn.prepare_cached("SELECT capture_id FROM board_objects WHERE id = ?1 AND capture_id IS NOT NULL")?;
+        let mut out = Vec::new();
+        for id in object_ids {
+            if let Some(cid) = stmt.query_row([id], |r| r.get::<_, String>(0)).optional()? {
+                out.push(cid);
+            }
+        }
+        Ok(out)
+    }
+
+    /// Cantidad de pizarrones que usan cada captura.
+    pub fn usage_counts(&self, capture_ids: &[String]) -> Result<Vec<(String, u32)>> {
+        let conn = self.conn();
+        let mut stmt =
+            conn.prepare_cached("SELECT COUNT(DISTINCT board_id) FROM board_objects WHERE capture_id = ?1")?;
+        let mut out = Vec::with_capacity(capture_ids.len());
+        for id in capture_ids {
+            out.push((id.clone(), stmt.query_row([id], |r| r.get(0))?));
+        }
+        Ok(out)
+    }
+
     /// (total, protegidas)
     pub fn capture_counts(&self) -> Result<(u32, u32)> {
         Ok(self.conn().query_row(

@@ -73,6 +73,16 @@ fn excluded() -> bool {
         })
 }
 
+/// ¿El portapapeles tiene una imagen "pura"? Office y otras apps adjuntan una
+/// versión en imagen al copiar texto o celdas; si hay texto, es una copia de
+/// texto y no se registra.
+unsafe fn is_plain_image() -> bool {
+    let has_image = IsClipboardFormatAvailable(png_format()) != 0
+        || IsClipboardFormatAvailable(CF_DIBV5 as u32) != 0
+        || IsClipboardFormatAvailable(CF_DIB as u32) != 0;
+    has_image && IsClipboardFormatAvailable(CF_UNICODETEXT as u32) == 0
+}
+
 pub fn start_listener(on_image: OnImage) {
     thread::Builder::new()
         .name("canvasclip-clipboard".into())
@@ -168,11 +178,7 @@ unsafe fn on_settled(hwnd: HWND) {
         if seq == l.last_seq || seq == OWN_SEQ.load(Ordering::SeqCst) {
             return;
         }
-        let png = png_format();
-        let has_image = IsClipboardFormatAvailable(png) != 0
-            || IsClipboardFormatAvailable(CF_DIBV5 as u32) != 0
-            || IsClipboardFormatAvailable(CF_DIB as u32) != 0;
-        if !has_image || excluded() {
+        if !is_plain_image() || excluded() {
             // Texto, archivos, etc.: el MVP no los registra.
             l.last_seq = seq;
             return;
@@ -256,8 +262,10 @@ unsafe fn read_image(hwnd: HWND) -> Result<Option<ImagePayload>, Busy> {
 
 pub fn read() -> Result<ClipContent, String> {
     unsafe {
-        if let Some(img) = read_image(LISTENER_HWND.load(Ordering::SeqCst)).map_err(|_| busy_msg())? {
-            return Ok(ClipContent::Image(img));
+        if is_plain_image() {
+            if let Some(img) = read_image(LISTENER_HWND.load(Ordering::SeqCst)).map_err(|_| busy_msg())? {
+                return Ok(ClipContent::Image(img));
+            }
         }
         if IsClipboardFormatAvailable(CF_UNICODETEXT as u32) != 0 {
             let _guard = open(LISTENER_HWND.load(Ordering::SeqCst)).map_err(|_| busy_msg())?;

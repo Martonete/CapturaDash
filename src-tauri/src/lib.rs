@@ -1,5 +1,8 @@
 //! CanvasClip — punto de entrada de la aplicación de escritorio.
 
+// En Linux/macOS (desarrollo y pruebas) la integración Win32 queda inactiva.
+#![cfg_attr(not(windows), allow(dead_code))]
+
 mod clipboard;
 mod commands;
 mod engine;
@@ -151,7 +154,9 @@ fn setup(app: &AppHandle) -> Result<(), String> {
 
     // 4. Integración con el sistema.
     windows::prepare(app, &settings.effects);
-    tray::build(app, settings.monitoring).map_err(|e| e.to_string())?;
+    if let Err(e) = tray::build(app, settings.monitoring) {
+        log::error!("no se pudo crear el ícono de la bandeja: {e}");
+    }
     if let Err(e) = shortcuts::register(app, &settings.shortcut) {
         log::warn!("{e}");
     }
