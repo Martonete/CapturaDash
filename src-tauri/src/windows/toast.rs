@@ -45,13 +45,7 @@ fn show(app: &AppHandle, payload: ToastPayload) {
     }
     let _ = win.emit_to(LABEL, TOAST_SHOW, payload);
 
-    #[cfg(windows)]
-    let shown = super::native::raw_hwnd(&win).map(super::native::show_no_activate).is_some();
-    #[cfg(not(windows))]
-    let shown = false;
-    if !shown {
-        let _ = win.show();
-    }
+    super::show_aux(&win, false);
 
     let generation = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
     let app = app.clone();
@@ -65,6 +59,6 @@ fn show(app: &AppHandle, payload: ToastPayload) {
 
 pub fn hide(app: &AppHandle) {
     if let Some(win) = app.get_webview_window(LABEL) {
-        let _ = win.hide();
+        super::hide_aux(&win);
     }
 }

@@ -9,13 +9,14 @@ use std::time::Duration;
 use canvasclip_core::imaging::ImagePayload;
 use windows_sys::Win32::Foundation::{GlobalFree, HANDLE, HWND, LPARAM, LRESULT, WPARAM};
 use windows_sys::Win32::System::DataExchange::{
-    AddClipboardFormatListener, CloseClipboard, EmptyClipboard, GetClipboardData,
+    AddClipboardFormatListener, CloseClipboard, EmptyClipboard, EnumClipboardFormats, GetClipboardData,
+    GetClipboardFormatNameW,
     GetClipboardSequenceNumber, IsClipboardFormatAvailable, OpenClipboard,
     RegisterClipboardFormatW, SetClipboardData,
 };
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::System::Memory::{GlobalAlloc, GlobalLock, GlobalSize, GlobalUnlock, GMEM_MOVEABLE};
-use windows_sys::Win32::System::Ole::{CF_DIB, CF_DIBV5, CF_UNICODETEXT};
+use windows_sys::Win32::System::Ole::{CF_DIB, CF_DIBV5, CF_ENHMETAFILE, CF_UNICODETEXT};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW, KillTimer, RegisterClassExW,
     SetTimer, HWND_MESSAGE, MSG, WM_CLIPBOARDUPDATE, WM_TIMER, WNDCLASSEXW,
@@ -73,14 +74,50 @@ fn excluded() -> bool {
         })
 }
 
-/// ¿El portapapeles tiene una imagen "pura"? Office y otras apps adjuntan una
-/// versión en imagen al copiar texto o celdas; si hay texto, es una copia de
-/// texto y no se registra.
-unsafe fn is_plain_image() -> bool {
-    let has_image = IsClipboardFormatAvailable(png_format()) != 0
+fn format_available(name: &str) -> bool {
+    let w = wide(name);
+    unsafe {
+        let f = RegisterClipboardFormatW(w.as_ptr());
+        f != 0 && IsClipboardFormatAvailable(f) != 0
+    }
+}
+
+unsafe fn has_image_format() -> bool {
+    IsClipboardFormatAvailable(png_format()) != 0
         || IsClipboardFormatAvailable(CF_DIBV5 as u32) != 0
-        || IsClipboardFormatAvailable(CF_DIB as u32) != 0;
-    has_image && IsClipboardFormatAvailable(CF_UNICODETEXT as u32) == 0
+        || IsClipboardFormatAvailable(CF_DIB as u32) != 0
+}
+
+/// ¿Es una imagen de verdad y no una copia de texto? Word, Excel y similares
+/// adjuntan una versión en imagen al copiar texto o celdas, siempre junto con
+/// texto enriquecido (RTF), un metarchivo (EMF) o formatos de hoja de cálculo.
+/// Las imágenes copiadas de Recortes o del navegador no traen esa combinación.
+unsafe fn is_plain_image() -> bool {
+    if !has_image_format() {
+        return false;
+    }
+    let has_text = IsClipboardFormatAvailable(CF_UNICODETEXT as u32) != 0;
+    let office_like = IsClipboardFormatAvailable(CF_ENHMETAFILE as u32) != 0
+        || ["Rich Text Format", "Biff12", "Biff8", "XML Spreadsheet"].iter().any(|n| format_available(n));
+    !(has_text && office_like)
+}
+
+/// Nombres de los formatos presentes (para el registro de diagnóstico).
+pub fn describe_formats() -> String {
+    unsafe {
+        let Ok(_guard) = open(LISTENER_HWND.load(Ordering::SeqCst)) else {
+            return "portapapeles ocupado".into();
+        };
+        let mut names = Vec::new();
+        let mut f = EnumClipboardFormats(0);
+        while f != 0 {
+            let mut buf = [0u16; 128];
+            let n = GetClipboardFormatNameW(f, buf.as_mut_ptr(), buf.len() as i32);
+            names.push(if n > 0 { String::from_utf16_lossy(&buf[..n as usize]) } else { format!("#{f}") });
+            f = EnumClipboardFormats(f);
+        }
+        if names.is_empty() { "vacío".into() } else { names.join(", ") }
+    }
 }
 
 pub fn start_listener(on_image: OnImage) {
@@ -262,23 +299,35 @@ unsafe fn read_image(hwnd: HWND) -> Result<Option<ImagePayload>, Busy> {
 
 pub fn read() -> Result<ClipContent, String> {
     unsafe {
-        if is_plain_image() {
-            if let Some(img) = read_image(LISTENER_HWND.load(Ordering::SeqCst)).map_err(|_| busy_msg())? {
+        let hwnd = LISTENER_HWND.load(Ordering::SeqCst);
+        let plain = is_plain_image();
+        if plain {
+            if let Some(img) = read_image(hwnd).map_err(|_| busy_msg())? {
                 return Ok(ClipContent::Image(img));
             }
         }
         if IsClipboardFormatAvailable(CF_UNICODETEXT as u32) != 0 {
-            let _guard = open(LISTENER_HWND.load(Ordering::SeqCst)).map_err(|_| busy_msg())?;
+            let _guard = open(hwnd).map_err(|_| busy_msg())?;
             if let Some(bytes) = read_global(CF_UNICODETEXT as u32) {
                 let units: Vec<u16> = bytes
                     .chunks_exact(2)
                     .map(|c| u16::from_le_bytes([c[0], c[1]]))
                     .take_while(|&u| u != 0)
                     .collect();
-                return Ok(ClipContent::Text(String::from_utf16_lossy(&units)));
+                let text = String::from_utf16_lossy(&units);
+                if !text.trim().is_empty() {
+                    return Ok(ClipContent::Text(text));
+                }
+            }
+        }
+        // Sin texto utilizable: si hay alguna imagen, usarla igual.
+        if !plain && has_image_format() {
+            if let Some(img) = read_image(hwnd).map_err(|_| busy_msg())? {
+                return Ok(ClipContent::Image(img));
             }
         }
     }
+    log::info!("pegar: no hay imagen ni texto; formatos presentes: {}", describe_formats());
     Ok(ClipContent::Empty)
 }
 

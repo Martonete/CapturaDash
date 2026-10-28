@@ -30,6 +30,44 @@ pub fn show_main(app: &AppHandle, view: Option<&str>) {
     }
 }
 
+/// Muestra el panel o el aviso. Sin `activate`, en Windows se muestra sin
+/// quitarle el foco a la aplicación en uso (`SW_SHOWNOACTIVATE`).
+///
+/// tao (el motor de ventanas de Tauri) guarda su propio estado de
+/// visibilidad y omite `show`/`hide` si cree que no cambia nada; como acá
+/// también se muestra de forma nativa, cada operación se hace por las dos
+/// vías para que ninguna quede sin efecto.
+pub fn show_aux(win: &WebviewWindow, activate: bool) {
+    if activate {
+        let _ = win.show();
+        #[cfg(windows)]
+        if let Some(h) = native::raw_hwnd(win) {
+            native::show(h);
+        }
+        let _ = win.set_focus();
+        return;
+    }
+    #[cfg(windows)]
+    match native::raw_hwnd(win) {
+        Some(h) => native::show_no_activate(h),
+        None => {
+            let _ = win.show();
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = win.show();
+    }
+}
+
+pub fn hide_aux(win: &WebviewWindow) {
+    #[cfg(windows)]
+    if let Some(h) = native::raw_hwnd(win) {
+        native::hide(h);
+    }
+    let _ = win.hide();
+}
+
 /// Ajustes nativos comunes al crear las ventanas.
 pub fn prepare(app: &AppHandle, effects: &str) {
     for label in [MAIN, panel::LABEL, toast::LABEL] {

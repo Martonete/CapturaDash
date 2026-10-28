@@ -133,23 +133,7 @@ pub fn open(app: &AppHandle, focus: bool) {
     }
     state.panel.set_mode(if focus { Mode::Focused } else { Mode::Hover });
 
-    #[cfg(windows)]
-    let shown_native = if !focus {
-        crate::windows::native::raw_hwnd(&win).map(crate::windows::native::show_no_activate).is_some()
-    } else {
-        false
-    };
-    #[cfg(not(windows))]
-    let shown_native = false;
-
-    if !shown_native {
-        if let Err(e) = win.show() {
-            log::error!("no se pudo mostrar el panel: {e}");
-        }
-    }
-    if focus {
-        let _ = win.set_focus();
-    }
+    super::show_aux(&win, focus);
     let _ = win.emit_to(LABEL, PANEL_OPENED, OpenedPayload { focused: focus });
 }
 
@@ -187,7 +171,7 @@ pub fn hide_now(app: &AppHandle) {
     state.panel.set_mode(Mode::Hidden);
     state.panel.closing.store(false, Ordering::SeqCst);
     if let Some(win) = window(app) {
-        let _ = win.hide();
+        super::hide_aux(&win);
     }
 }
 

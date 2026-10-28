@@ -143,6 +143,15 @@ fn setup(app: &AppHandle) -> Result<(), String> {
         tray_monitor_item: Mutex::new(None),
     });
 
+    // Las ventanas se crean recién ahora (en la configuración tienen
+    // "create": false): así su interfaz nunca invoca comandos antes de que
+    // el estado exista.
+    for config in app.config().app.windows.clone() {
+        tauri::WebviewWindowBuilder::from_config(app, &config)
+            .and_then(|b| b.build())
+            .map_err(|e| format!("No se pudo crear la ventana {}: {e}", config.label))?;
+    }
+
     // 3. Reparación de datos tras un cierre inesperado (en segundo plano).
     {
         let (db, storage) = (db.clone(), storage.clone());

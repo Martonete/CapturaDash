@@ -1,5 +1,8 @@
 //! Atajo global para abrir/cerrar el panel.
 
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+
 use tauri::{AppHandle, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
@@ -12,6 +15,21 @@ const RESERVED: &[&str] = &[
     "CONTROL+C", "CTRL+C", "CONTROL+V", "CTRL+V", "CONTROL+X", "CTRL+X", "CONTROL+Z", "CTRL+Z",
     "CONTROL+A", "CTRL+A", "CONTROL+S", "CTRL+S",
 ];
+
+/// Mantener apretado el atajo hace que el sistema lo repita; dentro de este
+/// intervalo las repeticiones se ignoran para que el panel no parpadee.
+const REPEAT_GUARD: Duration = Duration::from_millis(300);
+static LAST_TOGGLE: Mutex<Option<Instant>> = Mutex::new(None);
+
+fn on_pressed(app: &AppHandle) {
+    let mut last = LAST_TOGGLE.lock().unwrap_or_else(|e| e.into_inner());
+    if last.is_some_and(|t| t.elapsed() < REPEAT_GUARD) {
+        return;
+    }
+    *last = Some(Instant::now());
+    drop(last);
+    panel::toggle(app);
+}
 
 pub fn validate(accel: &str) -> Result<Shortcut, String> {
     let norm = accel.replace(' ', "").to_uppercase();
@@ -41,7 +59,7 @@ pub fn register(app: &AppHandle, accel: &str) -> Result<(), String> {
     }
     let result = gs.on_shortcut(shortcut, |app, _shortcut, event| {
         if event.state == ShortcutState::Pressed {
-            panel::toggle(app);
+            on_pressed(app);
         }
     });
     match result {
@@ -54,7 +72,7 @@ pub fn register(app: &AppHandle, accel: &str) -> Result<(), String> {
             if let Some(prev) = previous {
                 let restored = gs.on_shortcut(prev.as_str(), |app, _s, event| {
                     if event.state == ShortcutState::Pressed {
-                        panel::toggle(app);
+                        on_pressed(app);
                     }
                 });
                 if restored.is_ok() {

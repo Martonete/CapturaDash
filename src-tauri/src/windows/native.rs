@@ -14,7 +14,7 @@ use windows_sys::Win32::UI::Shell::{
     SHQueryUserNotificationState, QUNS_BUSY, QUNS_NOT_PRESENT, QUNS_PRESENTATION_MODE,
     QUNS_RUNNING_D3D_FULL_SCREEN,
 };
-use windows_sys::Win32::UI::WindowsAndMessaging::{GetCursorPos, ShowWindow, SW_SHOWNOACTIVATE};
+use windows_sys::Win32::UI::WindowsAndMessaging::{GetCursorPos, ShowWindow, SW_HIDE, SW_SHOW, SW_SHOWNOACTIVATE};
 
 pub fn raw_hwnd<R: tauri::Runtime>(w: &tauri::WebviewWindow<R>) -> Option<HWND> {
     w.hwnd().ok().map(|h| h.0 as HWND)
@@ -24,6 +24,18 @@ pub fn raw_hwnd<R: tauri::Runtime>(w: &tauri::WebviewWindow<R>) -> Option<HWND> 
 pub fn show_no_activate(hwnd: HWND) {
     unsafe {
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+    }
+}
+
+pub fn show(hwnd: HWND) {
+    unsafe {
+        ShowWindow(hwnd, SW_SHOW);
+    }
+}
+
+pub fn hide(hwnd: HWND) {
+    unsafe {
+        ShowWindow(hwnd, SW_HIDE);
     }
 }
 

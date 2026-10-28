@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import { api, errorMessage } from "@/services/api";
 import { on } from "@/services/events";
+import { retry } from "@/utils/timing";
 import type { BoardSummary } from "@/types/models";
 
 interface BoardsState {
@@ -19,7 +20,7 @@ export const useBoards = create<BoardsState>((set) => ({
   error: null,
   refresh: async () => {
     try {
-      const [boards, activeId] = await Promise.all([api.listBoards(), api.getActiveBoard()]);
+      const [boards, activeId] = await retry(() => Promise.all([api.listBoards(), api.getActiveBoard()]));
       set({ boards, activeId, error: null });
     } catch (e) {
       set({ error: errorMessage(e) });

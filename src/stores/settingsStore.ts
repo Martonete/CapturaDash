@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { api, errorMessage } from "@/services/api";
 import { on } from "@/services/events";
 import type { Settings } from "@/types/models";
+import { retry } from "@/utils/timing";
 
 interface SettingsState {
   settings: Settings | null;
@@ -17,7 +18,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
   error: null,
   load: async () => {
     try {
-      set({ settings: await api.getSettings(), error: null });
+      set({ settings: await retry(() => api.getSettings()), error: null });
     } catch (e) {
       set({ error: errorMessage(e) });
     }

@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { api, errorMessage } from "@/services/api";
 import { on } from "@/services/events";
 import type { Capture, CapturesChanged } from "@/types/models";
+import { retry } from "@/utils/timing";
 
 const PAGE = 60;
 
@@ -30,7 +31,7 @@ export const useHistory = create<HistoryState>((set, get) => ({
     const fav = get().favoritesOnly;
     set({ loading: true });
     try {
-      const items = await api.listCaptures(fav, PAGE, 0);
+      const items = await retry(() => api.listCaptures(fav, PAGE, 0), 4);
       if (get().favoritesOnly !== fav) return; // cambió el filtro mientras cargaba
       set({ items, hasMore: items.length === PAGE, loading: false, error: null });
     } catch (e) {
